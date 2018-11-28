@@ -267,7 +267,7 @@ response-rate
 response-rate
 0
 1000
-20.0
+50.0
 10
 1
 /y
@@ -282,7 +282,7 @@ exp-years-resident
 exp-years-resident
 1
 10
-2.0
+5.0
 1
 1
 y
@@ -411,7 +411,7 @@ INPUTBOX
 93
 365
 incent-amt
-25000.0
+15000.0
 1
 0
 Number
@@ -436,7 +436,7 @@ pct-scammers
 pct-scammers
 0
 100
-70.0
+75.0
 1
 1
 %
@@ -506,9 +506,9 @@ PENS
 "break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
 
 MONITOR
-843
+658
 445
-1018
+833
 490
 npv of program ($ million)
 sum program-dcf / 1000000
@@ -528,9 +528,9 @@ run-for-n-years
 Number
 
 MONITOR
-843
+658
 499
-1018
+833
 544
 npv/resident ($)
 sum program-dcf / total-responses
