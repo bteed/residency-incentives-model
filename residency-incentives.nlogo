@@ -1,9 +1,11 @@
 globals [
-  cash ;; int : the sum of revenues to date less the sum of expenses to date
+  ;cash ;; int : the sum of revenues to date less the sum of expenses to date
   npv-residents ;; list of floats : a list of the npv of each resident, reported immediately before death
   years-stayed ;; list of floats : a list of how many years each resident stayed, reported immediately before death
+  background-dcf ;; list of floats : discounted cashflows not attributable to the program at each tick
+  program-dcf ;; list of floats : discounted cashflows of residents attributable to the program at each tick
   govt-dcf ;; list of floats : discounted cashflows to the govt at each tick
-  dcf-stability ;; list of floats : standard deviation of govt-dcf over the past 5(?) years at each tick
+  dcf-stability ;; list of floats : standard deviation of govt-dcf over the past 5 years at each tick
   total-responses ;; int : the total number of people who have immigrated to date
 ]
 
@@ -13,7 +15,7 @@ residents-own [
   cost-per-month ;; int : the amount a resident costs the government per period
   my-cashflows ;; list of ints : the net cashflow from a resident at each period
   ticks-resident ;; list of ints : a list of the ticks during which the resident existed
-  is-abuser? ;; boolean : if true, resident will emigrate immediately when incentives stop
+  is-scammer? ;; boolean : if true, resident will emigrate immediately when incentives stop
 ]
 
 to setup
@@ -21,6 +23,8 @@ to setup
 
   set npv-residents ( list )
   set years-stayed ( list )
+  set background-dcf ( list )
+  set program-dcf ( list )
   set govt-dcf ( list )
   set dcf-stability ( list )
 
@@ -30,30 +34,28 @@ end
 to go
 
   set govt-dcf lput 0 govt-dcf
+  set background-dcf lput 0 background-dcf
+  set program-dcf lput 0 program-dcf
 
   ask residents [
-    incent
+    be-incented
     maybe-emigrate
     reside
   ]
 
-  set cash cash + govt-cashflow
-
   immigrate ( random-poisson ( response-rate / 12 ) )
 
-  pay-bills
+  pay-govt-bills
 
-  if ( ticks > 60 ) [
-    let tick-stability ( standard-deviation sublist govt-dcf ( ticks - 60 ) ticks )
-    set dcf-stability lput tick-stability dcf-stability
-    if ( tick-stability < ( max dcf-stability / 100 ) ) [ stop ]
-  ]
+  set govt-dcf replace-item ticks govt-dcf ( last background-dcf + last program-dcf  )
+
+  if ( ticks > run-for-n-years * 12 ) [ stop ]
 
   tick
 end
 
-to incent
-  let base-cost ( resident-cost / 12 )
+to be-incented
+  let base-cost ( marginal-cost / 12 )
   let incentive-cost ( incent-amt / over-n-months )
 
   ifelse ( n-ticks-resident <= over-n-months ) [
@@ -68,11 +70,11 @@ to immigrate [ n ]
     sprout-residents 1 [
       set shape "circle"
       set color white
-      set rev-per-month resident-value / 12
-      set cost-per-month resident-cost / 12
+      set rev-per-month marginal-rev / 12
+      set cost-per-month marginal-cost / 12
       set my-cashflows ( list 0 )
       set ticks-resident ( list ticks )
-      set is-abuser? ( random-float 1 < ( pct-abusers / 100 ) )
+      set is-scammer? ( random-float 1 < ( pct-scammers / 100 ) )
     ]
     set total-responses total-responses + 1
   ]
@@ -80,18 +82,17 @@ end
 
 to reside
 
-  let r monthly-discount-rate annual-discount-rate
-  let my-dcf ( rev-per-month - cost-per-month ) / ( 1 + r ) ^ ticks
+  let my-dcf ( rev-per-month - cost-per-month ) / ( 1 + monthly-discount-rate ) ^ ticks
 
   set my-cashflows lput ( my-dcf ) my-cashflows
-  set govt-dcf replace-item ticks govt-dcf ( last govt-dcf + my-dcf )
+  set program-dcf replace-item ticks program-dcf ( last program-dcf + my-dcf )
 
   set ticks-resident lput ticks ticks-resident
 end
 
 to maybe-emigrate
   let legit-emigrate? random-poisson ( 1 / (exp-years-resident * 12) ) >= 1
-  let skip-town? ( is-abuser? = true and n-ticks-resident > over-n-months )
+  let skip-town? ( is-scammer? = true and n-ticks-resident > over-n-months )
   if ( legit-emigrate? or skip-town? ) [
     set npv-residents lput ( npv my-cashflows n-ticks-resident ) npv-residents
     set years-stayed lput ( n-years-resident )  years-stayed
@@ -107,13 +108,12 @@ to-report mean-residency
   ]
 end
 
-to-report govt-cashflow
-  report sum [ rev-per-month ] of residents -  sum [ cost-per-month ] of residents
-end
+;to-report govt-cashflow
+;  report sum [ rev-per-month ] of residents -  sum [ cost-per-month ] of residents
+;end
 
 to-report dcf [ cashflows n-periods ]
-  let r monthly-discount-rate annual-discount-rate
-  report ( map [ [ c t ] -> c / (1 + r) ^ t ] cashflows range n-periods )
+  report ( map [ [ c t ] -> c / ( 1 + monthly-discount-rate ) ^ t ] cashflows range n-periods )
 end
 
 to-report npv [cashflows n-periods ]
@@ -136,8 +136,8 @@ to-report mean-years-stayed
   ]
 end
 
-to-report monthly-discount-rate [ r ]
-  let r-annual r / 100
+to-report monthly-discount-rate
+  let r-annual annual-discount-rate / 100
   let r-monthly ( ( 1 + r-annual ) ^ ( 1 / 12 ) ) - 1
   report r-monthly
 end
@@ -150,26 +150,25 @@ to-report n-years-resident
   report n-ticks-resident / 12
 end
 
-to plot-green-red [ x y ]
+to plot-green-red [ x y partition ]
   let plot-color green
-  if ( y < 0 ) [ set plot-color red ]
+  if ( y < partition ) [ set plot-color red ]
   set-plot-pen-color plot-color
   plotxy x y
 end
 
-to pay-bills
-  let monthly-bills fixed-costs / 12
-  let r monthly-discount-rate annual-discount-rate
+to pay-govt-bills
+  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * background-population + ( govt-fixed-rev - govt-fixed-cost  ) ) / 12
+  let discounted-background-cashflow ( monthly-background-cashflow / ( 1 + monthly-discount-rate ) ^ ticks )
 
-  set govt-dcf replace-item ticks govt-dcf ( last govt-dcf - ( monthly-bills / ( 1 + r ) ^ ticks ) )
+  set background-dcf replace-item ticks background-dcf ( last background-dcf + discounted-background-cashflow )
+
 end
 
-to auto-stop
-  if ( ticks > 60 ) [
-    let tick-stability ( standard-deviation sublist govt-dcf ( ticks - 60 ) ticks )
-    set dcf-stability lput tick-stability dcf-stability
-    if ( tick-stability < ( max dcf-stability / 20 ) ) [ stop ]
-  ]
+to pay-program-bills
+  let program-bills program-fixed-cost / ( 1 + monthly-discount-rate ) ^ ticks
+
+  set program-dcf replace-item ticks program-dcf ( last program-dcf - program-bills )
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -200,10 +199,10 @@ ticks
 30.0
 
 BUTTON
-103
-55
-178
-88
+110
+599
+185
+632
 NIL
 setup
 NIL
@@ -217,10 +216,10 @@ NIL
 1
 
 BUTTON
-13
-55
-94
-88
+20
+599
+101
+632
 NIL
 go
 T
@@ -234,11 +233,11 @@ NIL
 1
 
 PLOT
-933
-19
-1133
-169
-population
+1205
+42
+1405
+192
+population (from program)
 year
 n
 0.0
@@ -250,43 +249,43 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plotxy \n  ticks / 12\n  count residents "
-"pen-1" 1.0 0 -2674135 true "" "plotxy \n  ticks / 12\n  count residents with [ is-abuser? ]"
+"pen-1" 1.0 0 -2674135 true "" "plotxy \n  ticks / 12\n  count residents with [ is-scammer? ]"
 
 SLIDER
-2
-98
-175
-131
+11
+144
+184
+177
 response-rate
 response-rate
-1
+0
+1000
+20.0
 10
-10.0
-1
 1
 /y
 HORIZONTAL
 
 SLIDER
-2
-140
-174
-173
+11
+186
+183
+219
 exp-years-resident
 exp-years-resident
 1
 10
-5.0
+3.0
 1
 1
 y
 HORIZONTAL
 
 MONITOR
-933
-178
-1013
-223
+1118
+63
+1198
+108
 population
 count residents
 17
@@ -294,10 +293,10 @@ count residents
 11
 
 MONITOR
-999
-395
-1075
-440
+1122
+251
+1198
+296
 mean years
 mean-residency
 1
@@ -305,10 +304,10 @@ mean-residency
 11
 
 PLOT
-933
-233
-1133
-383
+1205
+201
+1405
+351
 years resident - rolling mean
 year
 years resident
@@ -324,10 +323,10 @@ PENS
 "pen-1" 1.0 0 -7500403 false "plotxy plot-x-min exp-years-resident" "plotxy \n  plot-x-max \n  exp-years-resident"
 
 PLOT
-932
-450
-1132
-600
+1205
+361
+1405
+511
 years resident - distribution
 years resident
 n residents
@@ -343,10 +342,10 @@ PENS
 "mean" 1.0 0 -2674135 true "" "plot-pen-reset\nplotxy mean-years-stayed plot-y-min\nplotxy mean-years-stayed plot-y-max"
 
 SLIDER
-4
-450
-194
-483
+20
+480
+192
+513
 annual-discount-rate
 annual-discount-rate
 0
@@ -358,62 +357,52 @@ annual-discount-rate
 HORIZONTAL
 
 INPUTBOX
-14
-192
-97
-252
-resident-value
-25000.0
+18
+236
+92
+296
+marginal-rev
+30057.0
 1
 0
 Number
 
 INPUTBOX
-102
-192
-186
-252
-resident-cost
-15000.0
+105
+235
+189
+295
+marginal-cost
+0.0
 1
 0
 Number
 
 PLOT
-661
-15
-861
-165
-govt-dcf
+657
+10
+1110
+222
+total govt dcf
 year
-cashflow
+(000,000s) / y
 0.0
 10.0
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 2 -16777216 true "" "clear-plot\n( foreach ( range ticks ) govt-dcf [ [ x y ] -> plot-green-red x / 12 y ] )"
-"pen-1" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
-
-MONITOR
-661
-175
-771
-220
-npv of govt-dcf
-sum govt-dcf
-0
-1
-11
+"dcf with program" 1.0 2 -16777216 true "" "if (not empty? govt-dcf ) [\n  plot-green-red ( ticks / 12 ) ( last govt-dcf * 12 ) / 1000000 ( last background-dcf * 12 ) / 1000000\n  ]"
+"dcf without program" 1.0 0 -8630108 true "" "if (not empty? background-dcf ) [\nplotxy ticks / 12 ( last background-dcf * 12 ) / 1000000\n]"
+"break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
 
 INPUTBOX
-12
-324
-87
-384
+18
+305
+93
+365
 incent-amt
 10000.0
 1
@@ -421,10 +410,10 @@ incent-amt
 Number
 
 INPUTBOX
-97
-326
-188
-386
+102
+305
+190
+365
 over-n-months
 12.0
 1
@@ -432,38 +421,123 @@ over-n-months
 Number
 
 SLIDER
-8
-396
-180
-429
-pct-abusers
-pct-abusers
+20
+437
+192
+470
+pct-scammers
+pct-scammers
 0
 100
-50.0
+75.0
 1
 1
 %
 HORIZONTAL
 
 MONITOR
-1051
-178
-1133
-223
-pct abusers
-count residents with [ is-abuser?  = true ] / count residents
+1114
+131
+1202
+176
+pct scammers
+count residents with [ is-scammer?  = true ] / count residents
 2
 1
 11
 
 INPUTBOX
-102
-254
+101
+74
+184
+134
+govt-fixed-cost
+1.7E9
+1
+0
+Number
+
+INPUTBOX
+11
+74
+99
+134
+govt-fixed-rev
+4.93E8
+1
+0
+Number
+
+INPUTBOX
+11
+10
 185
-314
-fixed-costs
-100000.0
+70
+background-population
+41786.0
+1
+0
+Number
+
+PLOT
+657
+233
+1110
+435
+program dcf
+year
+(00,000s) / y
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"program dcf" 1.0 2 -16777216 true "" "if ( not empty? program-dcf ) [ \nplot-green-red ( ticks / 12 ) ( last program-dcf * 12 ) / 100000 ( 0 )\n]"
+"break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
+
+MONITOR
+658
+446
+814
+491
+npv of program (00,000s)
+sum program-dcf / 100000
+0
+1
+11
+
+INPUTBOX
+57
+522
+146
+582
+run-for-n-years
+20.0
+1
+0
+Number
+
+MONITOR
+659
+511
+863
+556
+NIL
+sum program-dcf / total-responses
+0
+1
+11
+
+INPUTBOX
+28
+370
+183
+430
+program-fixed-cost
+250000.0
 1
 0
 Number
@@ -475,11 +549,13 @@ The model is intended to calculate, based on a range of parameters, the present 
 
 ## HOW IT WORKS
 
-The only agents are residents. Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. response to the incentive program) per year. While present, a resident contributes `resident-value` per year to government cashflows and consumes a baseline of `resident-cost` worth of government services per year. 
+The only agents are residents. Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. response to the incentive program) per year. While present, a resident contributes `resident-value` per year to government cashflows and consumes a baseline of `resident-cost` worth of government services per year.
+
+`background-population` is the number of people who are assumed to just live there anyway, notwithstanding the incentive program. It is used to calculate the baseline cashflow before the marginal cashflows attributable to the incentive program. The baseline cashflow the `fixed-rev + marginal-rev - fixed-cost - marginal-cost * background-population`
 
 The residency incentive program provides new immigrants a total of `incent-amt` over the resident's first `over-n-months` of residency. 
 
-`pct-abusers` percent of the new immigrants are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
+`pct-scammers` percent of the new immigrants are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
 
 Each tick of the model represents one month. At each tick, residents contribute (positively or negatively) to the total government discounted cashflow at that tick. The discounted cashflow is calculated monthly at a discount rate of `annual-discount-rate` with time 0 being first month of the ***program***, not of the resident's period of residency. For that reason, cashflows early in the program contribute significantly more to the total net present value than later cashflows.
 

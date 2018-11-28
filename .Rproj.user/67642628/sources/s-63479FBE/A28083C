@@ -1,0 +1,24 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1543342823949.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "A28083C",
+    "lastKnownWriteTime" : 1543360033,
+    "last_content_update" : 1543360033692,
+    "path" : "~/GitHub/residency-incentives-model/residency_incentives_notebook.Rmd",
+    "project_path" : "residency_incentives_notebook.Rmd",
+    "properties" : {
+        "chunk_output_type" : "inline",
+        "cursorPosition" : "27,45",
+        "scrollLine" : "13",
+        "tempName" : "Untitled2"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
