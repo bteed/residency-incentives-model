@@ -1,4 +1,0 @@
-"0","marginal_revenue <- tff_1819 / cen_pop_2016"
-"0","fixed_revenue <- all_revenue_1819 - tff_1819"
-"0","marginal_cost <- (ece_1819 + hss_1819) / cen_pop_2016"
-"0","fixed_cost <- opex_1819 - ece_1819 - hss_1819"
