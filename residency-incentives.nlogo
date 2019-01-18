@@ -112,10 +112,6 @@ to-report mean-residency
   ]
 end
 
-;to-report govt-cashflow
-;  report sum [ rev-per-month ] of residents -  sum [ cost-per-month ] of residents
-;end
-
 to-report dcf [ cashflows n-periods ]
   report ( map [ [ c t ] -> pv c t ] cashflows range n-periods )
 end
@@ -166,7 +162,7 @@ to plot-green-red [ x y partition ]
 end
 
 to pay-govt-bills
-  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * background-population + ( govt-fixed-rev - govt-fixed-cost  ) ) / 12
+  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * background-population + ( fixed-rev-mil - fixed-cost-mil ) * 1000000 ) / 12
   let discounted-background-cashflow pv monthly-background-cashflow ticks
 
   set background-dcf replace-item ticks background-dcf ( item ticks background-dcf + discounted-background-cashflow )
@@ -240,10 +236,10 @@ NIL
 1
 
 PLOT
-1205
-42
-1405
-192
+1024
+10
+1224
+151
 population (from program)
 year
 n
@@ -267,7 +263,7 @@ response-rate
 response-rate
 0
 1000
-20.0
+100.0
 10
 1
 /y
@@ -289,10 +285,10 @@ y
 HORIZONTAL
 
 MONITOR
+1024
+160
 1118
-63
-1198
-108
+205
 population
 count residents
 17
@@ -300,21 +296,21 @@ count residents
 11
 
 MONITOR
-1122
-251
-1198
-296
-mean years
+1024
+533
+1224
+578
+mean years resident
 mean-residency
 1
 1
 11
 
 PLOT
-1205
-201
-1405
-351
+1024
+214
+1224
+364
 years resident - rolling mean
 year
 years resident
@@ -330,10 +326,10 @@ PENS
 "pen-1" 1.0 0 -7500403 false "plotxy plot-x-min exp-years-resident" "plotxy \n  plot-x-max \n  exp-years-resident"
 
 PLOT
-1205
-361
-1405
-511
+1024
+373
+1224
+523
 years resident - distribution
 years resident
 n residents
@@ -364,7 +360,7 @@ annual-discount-rate
 HORIZONTAL
 
 INPUTBOX
-19
+11
 236
 93
 296
@@ -388,9 +384,9 @@ Number
 PLOT
 657
 10
-1110
-222
-total govt dcf
+1015
+205
+total discounted cashflow (to govt)
 year
 ($ million) / y
 0.0
@@ -406,12 +402,12 @@ PENS
 "break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
 
 INPUTBOX
-18
+11
 305
 93
 365
 incent-amt
-25000.0
+10000.0
 1
 0
 Number
@@ -436,17 +432,17 @@ pct-scammers
 pct-scammers
 0
 100
-70.0
+50.0
 1
 1
 %
 HORIZONTAL
 
 MONITOR
-1114
-131
-1202
-176
+1128
+160
+1224
+205
 pct scammers
 count residents with [ is-scammer?  = true ] / count residents
 2
@@ -458,8 +454,8 @@ INPUTBOX
 74
 184
 134
-govt-fixed-cost
-1.7E9
+fixed-cost-mil
+1700.0
 1
 0
 Number
@@ -469,8 +465,8 @@ INPUTBOX
 74
 99
 134
-govt-fixed-rev
-4.93E8
+fixed-rev-mil
+493.0
 1
 0
 Number
@@ -488,9 +484,9 @@ Number
 
 PLOT
 657
-233
-1110
-435
+214
+1015
+416
 program dcf
 year
 ($ million) / y
@@ -506,10 +502,10 @@ PENS
 "break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
 
 MONITOR
-843
-445
-1018
-490
+657
+425
+832
+470
 npv of program ($ million)
 sum program-dcf / 1000000
 2
@@ -519,7 +515,7 @@ sum program-dcf / 1000000
 INPUTBOX
 57
 522
-146
+154
 582
 run-for-n-years
 10.0
@@ -528,10 +524,10 @@ run-for-n-years
 Number
 
 MONITOR
-843
-499
-1018
-544
+841
+425
+1016
+470
 npv/resident ($)
 sum program-dcf / total-responses
 0
@@ -556,19 +552,35 @@ The model is intended to calculate, based on a range of parameters, the present 
 
 ## HOW IT WORKS
 
-The only agents are residents. Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. response to the incentive program) per year. While present, a resident contributes `resident-value` per year to government cashflows and consumes a baseline of `resident-cost` worth of government services per year.
 
-`background-population` is the number of people who are assumed to just live there anyway, notwithstanding the incentive program. It is used to calculate the baseline cashflow before the marginal cashflows attributable to the incentive program. The baseline cashflow the `fixed-rev + marginal-rev - fixed-cost - marginal-cost * background-population`
-
-The residency incentive program provides new immigrants a total of `incent-amt` over the resident's first `over-n-months` of residency. 
-
-`pct-scammers` percent of the new immigrants are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
 
 Each tick of the model represents one month. At each tick, residents contribute (positively or negatively) to the total government discounted cashflow at that tick. The discounted cashflow is calculated monthly at a discount rate of `annual-discount-rate` with time 0 being first month of the ***program***, not of the resident's period of residency. For that reason, cashflows early in the program contribute significantly more to the total net present value than later cashflows.
 
 ## HOW TO USE IT
 
-(how to use the model, including a description of each of the items in the Interface tab)
+### Fiscal parameters
+
+`background-population` is the number of people who are assumed to live in the jurisdiction anyway, notwithstanding the incentive program. 
+
+`fixed-rev-mil` and `fixed-cost-mil` are the government's annual revenues and costs, in millions of currency units, that are not attributable to individual residents (e.g. resource royalties and the military). 
+
+`marginal-rev` is the annual government revenue attributable to the presence of individual residents (e.g. income tax and per-capita federal transfers). `marginal-cost` is the value of services consumed by a resident (e.g. some aspects of health care and education).
+
+They are used to calculate the baseline cashflow before the marginal cashflows attributable to the incentive program. The baseline cashflow is given by `(marginal-rev - marginal-cost) * background-population + (fixed-rev-mil - fixed-cost-mil) * 1000000`.
+
+`annual-discount-rate` is the discount rate used to evaluate the net present value of cashflows.
+
+### Program parameters
+
+Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. responses to the incentive program) per year. While present, a resident contributes `resident-value` per year to government cashflows and consumes a baseline of `resident-cost` worth of government services per year. 
+
+The modeled incentive program provides new immigrants a total of `incent-amt` over the resident's first `over-n-months` of residency.
+
+`program-fixed-cost` is the annual cost of administering the incentive program (i.e. before the cost of the actual incentive payments).
+
+`pct-scammers` is percent of new residents who are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
+
+
 
 ## THINGS TO NOTICE
 
@@ -580,15 +592,12 @@ Each tick of the model represents one month. At each tick, residents contribute 
 
 ## EXTENDING THE MODEL
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+This is a very basic proof of concept model that makes a number of simplfying assumptions that could be improved on.
 
-## NETLOGO FEATURES
+ * Other than the `is-scammer?` variable, residents are homogenous. Of course the marginal cost and marginal revenue attributable to a resident depends on the individual. The model could be extended to draw these values from a probability distribution, to have them depend on different qualities of the resident (e.g. link `marginal-rev` to education or `marginal-cost` to age), or both.
+ * `response-rate` is taken as an exgenous variable, while in reality it would be heavily influenced by the details of the program.  The model could be extended by having `response-rate` influenced by `incent-amt` or by having a fixed budget from which to provide the incentives.
+ * The immigration and emigration of each resident is, other than the effect of `is-scammer?`, random and independent. Innumerable factors (e.g. global events, residents bringing family or friends, residents building ties with the community, shocks to the domestic economy, etc.) make this assumption unrealistic. The model could be extended to make the in-flow and out-flow of residents lumpier. 
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
-
-## RELATED MODELS
-
-(models in the NetLogo Models Library and elsewhere which are of related interest)
 
 ## CREDITS AND REFERENCES
 
