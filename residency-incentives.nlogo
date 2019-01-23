@@ -162,7 +162,7 @@ to plot-green-red [ x y partition ]
 end
 
 to pay-govt-bills
-  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * background-population + ( fixed-rev-mil - fixed-cost-mil ) * 1000000 ) / 12
+  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * baseline-population + ( fixed-rev-mil - fixed-cost-mil ) * 1000000 ) / 12
   let discounted-background-cashflow pv monthly-background-cashflow ticks
 
   set background-dcf replace-item ticks background-dcf ( item ticks background-dcf + discounted-background-cashflow )
@@ -257,13 +257,13 @@ PENS
 SLIDER
 11
 144
-184
+192
 177
 response-rate
 response-rate
 0
 1000
-100.0
+50.0
 10
 1
 /y
@@ -272,7 +272,7 @@ HORIZONTAL
 SLIDER
 11
 186
-183
+192
 219
 exp-years-resident
 exp-years-resident
@@ -452,7 +452,7 @@ count residents with [ is-scammer?  = true ] / count residents
 INPUTBOX
 101
 74
-184
+192
 134
 fixed-cost-mil
 1700.0
@@ -474,9 +474,9 @@ Number
 INPUTBOX
 11
 10
-185
+192
 70
-background-population
+baseline-population
 41786.0
 1
 0
@@ -552,39 +552,43 @@ The model is intended to calculate, based on a range of parameters, the present 
 
 ## HOW IT WORKS
 
-
-
-Each tick of the model represents one month. At each tick, residents contribute (positively or negatively) to the total government discounted cashflow at that tick. The discounted cashflow is calculated monthly at a discount rate of `annual-discount-rate` with time 0 being first month of the ***program***, not of the resident's period of residency. For that reason, cashflows early in the program contribute significantly more to the total net present value than later cashflows.
+Each tick of the model represents one month. At each tick, a number of residents move into  contribute (positively or negatively) to the total government discounted cashflow at that tick. The discounted cashflow is calculated monthly at a discount rate of `annual-discount-rate` with time 0 being first month of the ***program***, not of the resident's period of residency. For that reason, cashflows early in the program contribute significantly more to the total net present value than later cashflows.
 
 ## HOW TO USE IT
 
 ### Fiscal parameters
 
-`background-population` is the number of people who are assumed to live in the jurisdiction anyway, notwithstanding the incentive program. 
+`baseline-population` is the number of people who are assumed to live in the jurisdiction anyway, notwithstanding the incentive program. 
 
 `fixed-rev-mil` and `fixed-cost-mil` are the government's annual revenues and costs, in millions of currency units, that are not attributable to individual residents (e.g. resource royalties and the military). 
 
-`marginal-rev` is the annual government revenue attributable to the presence of individual residents (e.g. income tax and per-capita federal transfers). `marginal-cost` is the value of services consumed by a resident (e.g. some aspects of health care and education).
+`marginal-rev` is the annual government revenue attributable to the presence of individual residents (e.g. income tax and per-capita federal transfers). 
 
-They are used to calculate the baseline cashflow before the marginal cashflows attributable to the incentive program. The baseline cashflow is given by `(marginal-rev - marginal-cost) * background-population + (fixed-rev-mil - fixed-cost-mil) * 1000000`.
+`marginal-cost` is the marginal cost of providing services to an additional resident (e.g. health care and education). This could be effectively zero if there's unused capacity, but will more likely be a rough approximation of a nonlinear function. Adding one student might cost almost nothing; add 100 and you need to hire more teachers; add 1000 and you need to build a new school.
+
+These fiscal parameters are used to calculate the baseline cashflow before the marginal cashflows attributable to the incentive program. The baseline cashflow is given by `(marginal-rev - marginal-cost) * background-population + (fixed-rev-mil - fixed-cost-mil) * 1000000`.
 
 `annual-discount-rate` is the discount rate used to evaluate the net present value of cashflows.
 
 ### Program parameters
 
-Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. responses to the incentive program) per year. While present, a resident contributes `resident-value` per year to government cashflows and consumes a baseline of `resident-cost` worth of government services per year. 
+`program-fixed-cost` is the annual cost of administering the incentive program (i.e. before the cost of the actual incentive payments).
+
+Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. responses to the incentive program) per year and emmigrate on average, unless their `is-scammer?` variable described below is true, after `exp-years-resident`. `exp-years-resident` is also a poisson distribution. The intution is that, at each tick, each resident draws from `exp-years-resident` and drawing a value of one or more constitutes a "leaving event". 
 
 The modeled incentive program provides new immigrants a total of `incent-amt` over the resident's first `over-n-months` of residency.
 
-`program-fixed-cost` is the annual cost of administering the incentive program (i.e. before the cost of the actual incentive payments).
-
 `pct-scammers` is percent of new residents who are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
 
+### Setting up the model for your use-case
 
+1. Start with a conservative and well-sourced set of the fiscal parameters. `baseline-population` should be relatively simple and uncontroversial. The costs and revenues can be found in public accounts, but it's hard to draw a clear line between fixed and marginal, especially when they're reduced to a scalar. Erring on the side of revenues being fixed and costs being marginal will give the most conservative model. The barrier to modification is low, so it can be refined from there.
+2. Design a program by playing with the program parameters and seeing how they affect the NPV. Be aware that you will need to use your judgement on how they interact; it's unlikely that an incentive of $100 over 5 years is going to result in a significant response rate.
+3. When you have a general idea of the program design you're, use Netlogo's BehaviorSpace tool to perform a senstivity analysis on key assumptions. Most critical will be `marginal-cost`, `marginal-rev`, `response rate`, and `is-scammer?`.
 
 ## THINGS TO NOTICE
 
-(suggested things for the user to notice while running the model)
+
 
 ## THINGS TO TRY
 
@@ -596,12 +600,13 @@ This is a very basic proof of concept model that makes a number of simplfying as
 
  * Other than the `is-scammer?` variable, residents are homogenous. Of course the marginal cost and marginal revenue attributable to a resident depends on the individual. The model could be extended to draw these values from a probability distribution, to have them depend on different qualities of the resident (e.g. link `marginal-rev` to education or `marginal-cost` to age), or both.
  * `response-rate` is taken as an exgenous variable, while in reality it would be heavily influenced by the details of the program.  The model could be extended by having `response-rate` influenced by `incent-amt` or by having a fixed budget from which to provide the incentives.
- * The immigration and emigration of each resident is, other than the effect of `is-scammer?`, random and independent. Innumerable factors (e.g. global events, residents bringing family or friends, residents building ties with the community, shocks to the domestic economy, etc.) make this assumption unrealistic. The model could be extended to make the in-flow and out-flow of residents lumpier. 
+ * The immigration and emigration of each resident is, other than the effect of `is-scammer?`, random and independent. Innumerable factors (e.g. global events, residents bringing family or friends, residents building ties with the community, shocks to the domestic economy, etc.) make this assumption unrealistic. The model could be extended to make the in-flow and out-flow of residents lumpier.
 
 
 ## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+ * This model was inspired by [Tulsa Remote](https://tulsaremote.com/)
+ * The 
 @#$#@#$#@
 default
 true
