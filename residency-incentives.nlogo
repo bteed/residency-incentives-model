@@ -72,12 +72,12 @@ to immigrate [ n ]
   ask n-of n patches [
     sprout-residents 1 [
       set shape "circle"
-      set color white
       set rev-per-month marginal-rev / 12
       set cost-per-month marginal-cost / 12
       set my-cashflows ( list 0 )
       set ticks-resident ( list ticks )
       set is-tourist? ( random-float 1 < ( pct-tourists / 100 ) )
+      ifelse ( is-tourist? ) [ set color red ] [ set color blue ]
     ]
     set total-responses total-responses + 1
   ]
@@ -92,6 +92,8 @@ to reside
   set program-dcf replace-item ticks program-dcf ( item ticks program-dcf + my-dcf )
 
   set ticks-resident lput ticks ticks-resident
+
+  set label round sum my-cashflows
 end
 
 to maybe-emigrate
@@ -236,10 +238,10 @@ NIL
 1
 
 PLOT
-985
+963
 10
 1224
-151
+257
 Residents
 year
 n
@@ -285,10 +287,10 @@ y
 HORIZONTAL
 
 MONITOR
-985
-160
-1128
-205
+965
+269
+1094
+314
 population
 count residents
 17
@@ -296,10 +298,10 @@ count residents
 11
 
 MONITOR
-1039
-418
-1166
-463
+1035
+597
+1162
+642
 mean years resident
 mean-years-stayed
 1
@@ -307,10 +309,10 @@ mean-years-stayed
 11
 
 PLOT
-986
-214
-1224
-409
+965
+324
+1222
+588
 Length of Residency
 years resident
 n residents
@@ -346,7 +348,7 @@ INPUTBOX
 97
 235
 marginal-rev
-30057.0
+29431.0
 1
 0
 Number
@@ -363,10 +365,10 @@ marginal-cost
 Number
 
 PLOT
-657
-214
-976
-409
+656
+325
+952
+589
 Total Discounted Cashflow
 year
 ($ million) / y
@@ -388,7 +390,7 @@ INPUTBOX
 96
 371
 incent-amt
-50000.0
+10000.0
 1
 0
 Number
@@ -420,10 +422,10 @@ pct-tourists
 HORIZONTAL
 
 MONITOR
-1137
-160
+1106
+269
 1224
-205
+314
 pct tourists
 count residents with [ is-tourist?  = true ] / count residents
 2
@@ -466,8 +468,8 @@ Number
 PLOT
 657
 10
-975
-151
+952
+257
 Program Discounted Cashflow
 year
 ($ million) / y
@@ -483,10 +485,10 @@ PENS
 "break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
 
 MONITOR
-657
-160
-810
-205
+655
+269
+799
+314
 npv of program ($ million)
 sum program-dcf / 1000000
 2
@@ -505,10 +507,10 @@ run-for-n-years
 Number
 
 MONITOR
-818
-160
-976
-205
+816
+269
+951
+314
 npv/resident ($)
 sum program-dcf / total-responses
 0
@@ -527,10 +529,10 @@ program-fixed-cost
 Number
 
 TEXTBOX
-80
-158
-135
-176
+77
+159
+170
+177
 ($ 000,000)
 10
 0.0
@@ -569,7 +571,7 @@ TEXTBOX
 @#$#@#$#@
 ## WHAT IS IT?
 
-The model estimates the net present value of government cashflows attributable to an incentive program to encourage new residents to move into a jurisdiction. It was specifically inspired by, but is neither affiliated with nor endorsed by, [Tulsa Remote](https://tulsaremote.com/) and best models that type of subnational labour mobility with minimal barriers to entry and exit. With modification it could be generalizable to other types of resettlement or integration programs.
+The model estimates the net present value of government cashflows attributable to an incentive program to encourage new residents to move into a jurisdiction. It was specifically inspired by, but is neither affiliated with nor endorsed by, [Tulsa Remote](https://tulsaremote.com/) and best models that type of subnational labour mobility with minimal barriers to entry and exit. With modification it could be generalizable to other types of resettlement or integration programs. 
 
 ## HOW IT WORKS
 
@@ -579,7 +581,11 @@ The model doesn't currently take into account how realistic the program is; you 
 
 ## HOW TO USE IT
 
+The starting demographic and fiscal parameters are rough estimates based on the Canada's [Northwest Territories](https://en.wikipedia.org/wiki/Northwest_Territories), which is a very unusual jurisdiction. Naturally, they should be modified as appropriate. A sensitivity analysis should also be performed if the model is to be used actual policy design and analysis. NetLogo's BehaviorSpace tool works well for this.
+
 ### Model parameters
+
+#### Demograpic
 
 `baseline-population` is the number of people who are assumed to live in the jurisdiction anyway, notwithstanding the incentive program. 
 
@@ -609,6 +615,8 @@ The incentive program runs for `run-for-n-years` years. After that, no new resid
 
 ### Model Outputs
 
+The View shows the residents that are present at a given time. Legitimate residents are blue and tourists are red. The labels are the sum of the residents cashflows to-date.
+
 The **Program Discounted Cashflow** shows the postive (green) or negative (red) cashflows of the incentive program, taking into account the marginal cost and revenue of each resident, the incentive, and the program fixed costs.
 
 The **Total Discounted Cashflow** graph shows the value of all future government cashflows in tick zero dollars. The purple line is the baseline cashflow without the incentive program and the green or red, depending on whether it's above or below the baseline, is the baseline cashflow plus the incentive program cashflow described above.
@@ -625,10 +633,12 @@ This is a very basic proof of concept model that makes a number of simplfying as
  * `response-rate` is taken as an exgenous variable, while in reality it would be heavily influenced by the details of the program.  The model could be extended by having `response-rate` influenced by `incent-amt` or by having a fixed budget from which to provide the incentives.
  * The immigration and emigration of each resident is, other than the effect of `is-tourist?`, random and independent. Innumerable factors (e.g. global events, residents bringing family or friends, residents building ties with the community, shocks to the domestic economy, etc.) make this assumption unrealistic. The model could be extended to make the in-flow and out-flow of residents lumpier.
 
-
 ## CREDITS AND REFERENCES
 
  * [Tulsa Remote](https://tulsaremote.com/)
+ * [Northwest Territories 2016 Census Profile](https://www12.statcan.gc.ca/census-recensement/2016/dp-pd/prof/details/Page.cfm?Lang=E&Geo1=PR&Code1=61&Geo2=&Code2=&Data=Count&SearchText=Northwest%20Territories&SearchType=Begins&SearchPR=01&B1=All&GeoLevel=PR&GeoCode=61)
+ * [Government of the Northwest Territories 2018-19 Budget](https://www.fin.gov.nt.ca/sites/fin/files/main_estimates_2018-2019_for_website_amended_26feb2018.pdf)
+ * [Federal Transfers to the Government of the Northwest Territories](https://www.fin.gc.ca/fedprov/mtp-eng.asp#NorthwestTerritories)
 @#$#@#$#@
 default
 true
