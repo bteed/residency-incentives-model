@@ -15,7 +15,7 @@ residents-own [
   cost-per-month ;; int : the amount a resident costs the government per period
   my-cashflows ;; list of ints : the net cashflow from a resident at each period
   ticks-resident ;; list of ints : a list of the ticks during which the resident existed
-  is-scammer? ;; boolean : if true, resident will emigrate immediately when incentives stop
+  is-tourist? ;; boolean : if true, resident will emigrate immediately when incentives stop
 ]
 
 to setup
@@ -77,7 +77,7 @@ to immigrate [ n ]
       set cost-per-month marginal-cost / 12
       set my-cashflows ( list 0 )
       set ticks-resident ( list ticks )
-      set is-scammer? ( random-float 1 < ( pct-scammers / 100 ) )
+      set is-tourist? ( random-float 1 < ( pct-tourists / 100 ) )
     ]
     set total-responses total-responses + 1
   ]
@@ -96,7 +96,7 @@ end
 
 to maybe-emigrate
   let legit-emigrate? random-poisson ( 1 / (exp-years-resident * 12) ) >= 1
-  let skip-town? ( is-scammer? = true and n-ticks-resident > over-n-months )
+  let skip-town? ( is-tourist? = true and n-ticks-resident > over-n-months )
   if ( legit-emigrate? or skip-town? ) [
     set npv-residents lput ( npv my-cashflows n-ticks-resident ) npv-residents
     set years-stayed lput ( n-years-resident )  years-stayed
@@ -162,7 +162,7 @@ to plot-green-red [ x y partition ]
 end
 
 to pay-govt-bills
-  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * baseline-population + ( fixed-rev-mil - fixed-cost-mil ) * 1000000 ) / 12
+  let monthly-background-cashflow ( ( marginal-rev - marginal-cost ) * baseline-population + ( fixed-rev - fixed-cost ) * 1000000 ) / 12
   let discounted-background-cashflow pv monthly-background-cashflow ticks
 
   set background-dcf replace-item ticks background-dcf ( item ticks background-dcf + discounted-background-cashflow )
@@ -175,9 +175,9 @@ to pay-program-bills
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+206
 10
-647
+643
 448
 -1
 -1
@@ -202,10 +202,10 @@ ticks
 30.0
 
 BUTTON
-110
-599
-185
-632
+111
+607
+186
+640
 NIL
 setup
 NIL
@@ -219,10 +219,10 @@ NIL
 1
 
 BUTTON
-20
-599
-101
-632
+21
+607
+102
+640
 NIL
 go
 T
@@ -236,11 +236,11 @@ NIL
 1
 
 PLOT
-1024
+985
 10
 1224
 151
-population (from program)
+Residents
 year
 n
 0.0
@@ -248,17 +248,17 @@ n
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plotxy \n  ticks / 12\n  count residents "
-"pen-1" 1.0 0 -2674135 true "" "plotxy \n  ticks / 12\n  count residents with [ is-scammer? ]"
+"total" 1.0 0 -16777216 true "" "plotxy \n  ticks / 12\n  count residents "
+"tourist" 1.0 0 -2674135 true "" "plotxy \n  ticks / 12\n  count residents with [ is-tourist? ]"
 
 SLIDER
-11
-144
-192
-177
+14
+440
+193
+473
 response-rate
 response-rate
 0
@@ -270,24 +270,24 @@ response-rate
 HORIZONTAL
 
 SLIDER
-11
-186
-192
-219
+14
+473
+193
+506
 exp-years-resident
 exp-years-resident
 1
 10
-2.0
+4.0
 1
 1
 y
 HORIZONTAL
 
 MONITOR
-1024
+985
 160
-1118
+1128
 205
 population
 count residents
@@ -296,41 +296,22 @@ count residents
 11
 
 MONITOR
-1024
-533
-1224
-578
+1039
+418
+1166
+463
 mean years resident
-mean-residency
+mean-years-stayed
 1
 1
 11
 
 PLOT
-1024
+986
 214
 1224
-364
-years resident - rolling mean
-year
-years resident
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -2674135 true "" "plotxy\n  ticks / 12\n  mean-residency "
-"pen-1" 1.0 0 -7500403 false "plotxy plot-x-min exp-years-resident" "plotxy \n  plot-x-max \n  exp-years-resident"
-
-PLOT
-1024
-373
-1224
-523
-years resident - distribution
+409
+Length of Residency
 years resident
 n residents
 0.0
@@ -345,10 +326,10 @@ PENS
 "mean" 1.0 0 -2674135 true "" "plot-pen-reset\nplotxy mean-years-stayed plot-y-min\nplotxy mean-years-stayed plot-y-max"
 
 SLIDER
-20
-480
-192
-513
+15
+251
+193
+284
 annual-discount-rate
 annual-discount-rate
 0
@@ -360,10 +341,10 @@ annual-discount-rate
 HORIZONTAL
 
 INPUTBOX
-11
-236
-93
-296
+15
+175
+97
+235
 marginal-rev
 30057.0
 1
@@ -371,10 +352,10 @@ marginal-rev
 Number
 
 INPUTBOX
-102
-236
-189
-296
+106
+175
+193
+235
 marginal-cost
 0.0
 1
@@ -383,10 +364,10 @@ Number
 
 PLOT
 657
-10
-1015
-205
-total discounted cashflow (to govt)
+214
+976
+409
+Total Discounted Cashflow
 year
 ($ million) / y
 0.0
@@ -402,21 +383,21 @@ PENS
 "break even" 1.0 0 -7500403 true "" "plotxy plot-x-min 0\nplotxy plot-x-max 0"
 
 INPUTBOX
-11
-305
-93
-365
+14
+311
+96
+371
 incent-amt
-10000.0
+50000.0
 1
 0
 Number
 
 INPUTBOX
-102
-305
-190
-365
+105
+311
+193
+371
 over-n-months
 12.0
 1
@@ -424,58 +405,58 @@ over-n-months
 Number
 
 SLIDER
-20
-437
-192
-470
-pct-scammers
-pct-scammers
+14
+506
+193
+539
+pct-tourists
+pct-tourists
 0
 100
-50.0
+20.0
 1
 1
 %
 HORIZONTAL
 
 MONITOR
-1128
+1137
 160
 1224
 205
-pct scammers
-count residents with [ is-scammer?  = true ] / count residents
+pct tourists
+count residents with [ is-tourist?  = true ] / count residents
 2
 1
 11
 
 INPUTBOX
-101
-74
-192
-134
-fixed-cost-mil
+107
+97
+195
+157
+fixed-cost
 1700.0
 1
 0
 Number
 
 INPUTBOX
-11
-74
-99
-134
-fixed-rev-mil
+14
+97
+98
+157
+fixed-rev
 493.0
 1
 0
 Number
 
 INPUTBOX
-11
-10
-192
-70
+14
+13
+195
+73
 baseline-population
 41786.0
 1
@@ -484,10 +465,10 @@ Number
 
 PLOT
 657
-214
-1015
-416
-program dcf
+10
+975
+151
+Program Discounted Cashflow
 year
 ($ million) / y
 0.0
@@ -503,9 +484,9 @@ PENS
 
 MONITOR
 657
-425
-832
-470
+160
+810
+205
 npv of program ($ million)
 sum program-dcf / 1000000
 2
@@ -513,10 +494,10 @@ sum program-dcf / 1000000
 11
 
 INPUTBOX
-57
-522
-154
-582
+14
+542
+193
+602
 run-for-n-years
 10.0
 1
@@ -524,10 +505,10 @@ run-for-n-years
 Number
 
 MONITOR
-841
-425
-1016
-470
+818
+160
+976
+205
 npv/resident ($)
 sum program-dcf / total-responses
 0
@@ -535,32 +516,76 @@ sum program-dcf / total-responses
 11
 
 INPUTBOX
-28
-370
-183
-430
+14
+375
+193
+435
 program-fixed-cost
 250000.0
 1
 0
 Number
 
+TEXTBOX
+80
+158
+135
+176
+($ 000,000)
+10
+0.0
+1
+
+TEXTBOX
+56
+82
+167
+100
+Fiscal Parameters
+12
+0.0
+1
+
+TEXTBOX
+41
+293
+161
+311
+Program Parameters
+12
+0.0
+1
+
+TEXTBOX
+94
+234
+112
+252
+($)
+11
+0.0
+1
+
 @#$#@#$#@
 ## WHAT IS IT?
 
-The model is intended to calculate, based on a range of parameters, the present value of discounted future cashflows attributable to a government program to incentivize new residents to move into a jurisdiction. 
+The model estimates the net present value of government cashflows attributable to an incentive program to encourage new residents to move into a jurisdiction. It was specifically inspired by, but is neither affiliated with nor endorsed by, [Tulsa Remote](https://tulsaremote.com/) and best models that type of subnational labour mobility with minimal barriers to entry and exit. With modification it could be generalizable to other types of resettlement or integration programs.
 
 ## HOW IT WORKS
 
-Each tick of the model represents one month. At each tick, a number of residents move into  contribute (positively or negatively) to the total government discounted cashflow at that tick. The discounted cashflow is calculated monthly at a discount rate of `annual-discount-rate` with time 0 being first month of the ***program***, not of the resident's period of residency. For that reason, cashflows early in the program contribute significantly more to the total net present value than later cashflows.
+Each tick of the model represents one month. At each tick, residents move into or out of the jurisdiction and contribute positively or negatively to the total government cashflows at that tick. New residents receive an incentive of `incent-amt` over their first `over-n-months` of residency. The hope is that they'll stay for an expected average of `exp-years-resident`, but `pct-tourists` of the residents are only there for the incentive and will leave once they stop receiving it.
+
+The model doesn't currently take into account how realistic the program is; you can make the incentive $10 and say that 1000 people/year will take you up on it. It assumes that the program will work as specified then looks at the resulting fiscal impact. 
 
 ## HOW TO USE IT
 
-### Fiscal parameters
+### Model parameters
 
 `baseline-population` is the number of people who are assumed to live in the jurisdiction anyway, notwithstanding the incentive program. 
 
-`fixed-rev-mil` and `fixed-cost-mil` are the government's annual revenues and costs, in millions of currency units, that are not attributable to individual residents (e.g. resource royalties and the military). 
+#### Fiscal
+
+`fixed-rev` and `fixed-cost` are the government's annual revenues and costs, in millions of currency units, that are not attributable to individual residents (e.g. resource royalties and the military). 
 
 `marginal-rev` is the annual government revenue attributable to the presence of individual residents (e.g. income tax and per-capita federal transfers). 
 
@@ -568,45 +593,42 @@ Each tick of the model represents one month. At each tick, a number of residents
 
 These fiscal parameters are used to calculate the baseline cashflow before the marginal cashflows attributable to the incentive program. The baseline cashflow is given by `(marginal-rev - marginal-cost) * background-population + (fixed-rev-mil - fixed-cost-mil) * 1000000`.
 
-`annual-discount-rate` is the discount rate used to evaluate the net present value of cashflows.
+`annual-discount-rate` is the discount rate used to calculate the net present value of cashflows.  The discounted cashflow is calculated monthly at a discount rate of `annual-discount-rate` with time 0 being first month of the program, not of the resident's period of residency. 
 
-### Program parameters
+#### Program
 
-`program-fixed-cost` is the annual cost of administering the incentive program (i.e. before the cost of the actual incentive payments).
+Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. responses to the incentive program) per year and emmigrate on average, unless their `is-tourist?` variable described below is true, after `exp-years-resident`. `exp-years-resident` is also a poisson distribution. The intution is that, at each tick, each resident draws from `exp-years-resident` and drawing a value of one or more constitutes a "leaving event". 
 
-Residents immigrate at a poisson-distributed rate of `response-rate` (i.e. responses to the incentive program) per year and emmigrate on average, unless their `is-scammer?` variable described below is true, after `exp-years-resident`. `exp-years-resident` is also a poisson distribution. The intution is that, at each tick, each resident draws from `exp-years-resident` and drawing a value of one or more constitutes a "leaving event". 
+`pct-tourists` is percent of new residents who are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
 
 The modeled incentive program provides new immigrants a total of `incent-amt` over the resident's first `over-n-months` of residency.
 
-`pct-scammers` is percent of new residents who are interested only in the incentive and will emigrate as soon as they stop receiving the incentive. Otherwise, residents emigrate with a poisson-distributed probability such that each resident is expected to have one "emigration event" every `exp-years-resident` years.
+`program-fixed-cost` is the annual cost of administering the incentive program (i.e. before the cost of the actual incentive payments).
 
-### Setting up the model for your use-case
+The incentive program runs for `run-for-n-years` years. After that, no new residents will arrive and no program costs will be paid. However, the model will continue to run until there are no residents remaining. 
 
-1. Start with a conservative and well-sourced set of the fiscal parameters. `baseline-population` should be relatively simple and uncontroversial. The costs and revenues can be found in public accounts, but it's hard to draw a clear line between fixed and marginal, especially when they're reduced to a scalar. Erring on the side of revenues being fixed and costs being marginal will give the most conservative model. The barrier to modification is low, so it can be refined from there.
-2. Design a program by playing with the program parameters and seeing how they affect the NPV. Be aware that you will need to use your judgement on how they interact; it's unlikely that an incentive of $100 over 5 years is going to result in a significant response rate.
-3. When you have a general idea of the program design you're, use Netlogo's BehaviorSpace tool to perform a senstivity analysis on key assumptions. Most critical will be `marginal-cost`, `marginal-rev`, `response rate`, and `is-scammer?`.
+### Model Outputs
 
-## THINGS TO NOTICE
+The **Program Discounted Cashflow** shows the postive (green) or negative (red) cashflows of the incentive program, taking into account the marginal cost and revenue of each resident, the incentive, and the program fixed costs.
 
+The **Total Discounted Cashflow** graph shows the value of all future government cashflows in tick zero dollars. The purple line is the baseline cashflow without the incentive program and the green or red, depending on whether it's above or below the baseline, is the baseline cashflow plus the incentive program cashflow described above.
 
+The **Residents** graph shows the number of residents attributable to the program over time, with the black line the total and the red the number of tourists. 
 
-## THINGS TO TRY
-
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+The **Length of Residency** histogram shows how distribution of years resident, with the red vertical line representing the mean.
 
 ## EXTENDING THE MODEL
 
 This is a very basic proof of concept model that makes a number of simplfying assumptions that could be improved on.
 
- * Other than the `is-scammer?` variable, residents are homogenous. Of course the marginal cost and marginal revenue attributable to a resident depends on the individual. The model could be extended to draw these values from a probability distribution, to have them depend on different qualities of the resident (e.g. link `marginal-rev` to education or `marginal-cost` to age), or both.
+ * Other than the `is-tourist?` variable, residents are homogenous. Of course the marginal cost and marginal revenue attributable to a resident depends on the individual. The model could be extended to draw these values from a probability distribution, to have them depend on different qualities of the resident (e.g. link `marginal-rev` to education or `marginal-cost` to age), or both.
  * `response-rate` is taken as an exgenous variable, while in reality it would be heavily influenced by the details of the program.  The model could be extended by having `response-rate` influenced by `incent-amt` or by having a fixed budget from which to provide the incentives.
- * The immigration and emigration of each resident is, other than the effect of `is-scammer?`, random and independent. Innumerable factors (e.g. global events, residents bringing family or friends, residents building ties with the community, shocks to the domestic economy, etc.) make this assumption unrealistic. The model could be extended to make the in-flow and out-flow of residents lumpier.
+ * The immigration and emigration of each resident is, other than the effect of `is-tourist?`, random and independent. Innumerable factors (e.g. global events, residents bringing family or friends, residents building ties with the community, shocks to the domestic economy, etc.) make this assumption unrealistic. The model could be extended to make the in-flow and out-flow of residents lumpier.
 
 
 ## CREDITS AND REFERENCES
 
- * This model was inspired by [Tulsa Remote](https://tulsaremote.com/)
- * The 
+ * [Tulsa Remote](https://tulsaremote.com/)
 @#$#@#$#@
 default
 true
@@ -917,6 +939,56 @@ NetLogo 6.0.4
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="dcf-by-incent-amt" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>last program-dcf</metric>
+    <enumeratedValueSet variable="marginal-rev">
+      <value value="30057"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="pct-tourists">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="response-rate">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fixed-cost">
+      <value value="1700"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="annual-discount-rate">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="program-fixed-cost">
+      <value value="250000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="incent-amt">
+      <value value="10000"/>
+      <value value="20000"/>
+      <value value="30000"/>
+      <value value="40000"/>
+      <value value="50000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="baseline-population">
+      <value value="41786"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fixed-rev">
+      <value value="493"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="run-for-n-years">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="over-n-months">
+      <value value="12"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="exp-years-resident">
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="marginal-cost">
+      <value value="0"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
